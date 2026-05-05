@@ -1,0 +1,625 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+import json
+import re
+
+class MovieLibrary:
+    """Приложение для хранения информации о фильмах"""
+    
+    def __init__(self):
+        # Загрузка фильмов из файла
+        self.movies = self.load_movies()
+        
+        # Список жанров
+        self.genres = [
+            "Боевик", "Комедия", "Драма", "Фантастика",
+            "Ужасы", "Триллер", "Мелодрама", "Детектив",
+            "Приключения", "Анимация", "Документальный", "Криминал"
+        ]
+        
+        # Создание главного окна
+        self.window = tk.Tk()
+        self.window.title("🎬 Movie Library")
+        self.window.geometry("1000x650")
+        self.window.resizable(False, False)
+        self.window.configure(bg="#1a1a2e")
+        
+        # Центрирование окна
+        self.center_window()
+        
+        # Создание интерфейса
+        self.create_widgets()
+        
+        # Обновление таблицы
+        self.update_table()
+        
+        # Обработка закрытия окна
+        self.window.protocol("WM_DELETE_WINDOW", self.on_closing)
+    
+    def center_window(self):
+        """Центрирует окно на экране"""
+        self.window.update_idletasks()
+        width = 1000
+        height = 650
+        x = (self.window.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.window.winfo_screenheight() // 2) - (height // 2)
+        self.window.geometry(f"{width}x{height}+{x}+{y}")
+    
+    def load_movies(self):
+        """Загружает фильмы из JSON-файла"""
+        try:
+            with open("movies.json", "r", encoding="utf-8") as file:
+                movies = json.load(file)
+                if isinstance(movies, list):
+                    return movies
+                return []
+        except FileNotFoundError:
+            return []
+        except json.JSONDecodeError:
+            messagebox.showerror("Ошибка", "Файл movies.json повреждён")
+            return []
+    
+    def save_movies(self):
+        """Сохраняет фильмы в JSON-файл"""
+        try:
+            with open("movies.json", "w", encoding="utf-8") as file:
+                json.dump(self.movies, file, ensure_ascii=False, indent=4)
+            return True
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось сохранить: {e}")
+            return False
+    
+    def create_widgets(self):
+        """Создаёт все виджеты интерфейса"""
+        
+        # Заголовок
+        title_frame = tk.Frame(self.window, bg="#1a1a2e")
+        title_frame.pack(fill="x", pady=(15, 10), padx=20)
+        
+        title_label = tk.Label(
+            title_frame,
+            text="🎬 Movie Library",
+            font=("Segoe UI", 20, "bold"),
+            bg="#1a1a2e",
+            fg="#ffffff"
+        )
+        title_label.pack()
+        
+        subtitle_label = tk.Label(
+            title_frame,
+            text="Личная кинотека",
+            font=("Segoe UI", 10),
+            bg="#1a1a2e",
+            fg="#888888"
+        )
+        subtitle_label.pack()
+        
+        # Основной фрейм
+        main_frame = tk.Frame(self.window, bg="#1a1a2e")
+        main_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        # Левая панель - форма добавления
+        left_frame = tk.Frame(main_frame, bg="#16213e", relief="groove", bd=1)
+        left_frame.pack(side="left", fill="both", padx=(0, 10), ipadx=10, ipady=10)
+        
+        tk.Label(
+            left_frame,
+            text="✏️ ДОБАВИТЬ ФИЛЬМ",
+            font=("Segoe UI", 14, "bold"),
+            bg="#16213e",
+            fg="#ffffff"
+        ).pack(pady=(10, 15))
+        
+        # Поле названия
+        tk.Label(
+            left_frame,
+            text="🎬 Название фильма:",
+            font=("Segoe UI", 11),
+            bg="#16213e",
+            fg="#cccccc"
+        ).pack(anchor="w", pady=(0, 5))
+        
+        self.title_entry = tk.Entry(
+            left_frame,
+            font=("Segoe UI", 11),
+            bg="#0f3460",
+            fg="#ffffff",
+            relief="flat",
+            width=25
+        )
+        self.title_entry.pack(fill="x", pady=(0, 15))
+        
+        # Поле жанра
+        tk.Label(
+            left_frame,
+            text="🎭 Жанр:",
+            font=("Segoe UI", 11),
+            bg="#16213e",
+            fg="#cccccc"
+        ).pack(anchor="w", pady=(0, 5))
+        
+        self.genre_combo = ttk.Combobox(
+            left_frame,
+            values=self.genres,
+            font=("Segoe UI", 11),
+            state="readonly",
+            width=22
+        )
+        self.genre_combo.pack(fill="x", pady=(0, 15))
+        self.genre_combo.set("Выберите жанр")
+        
+        # Поле года выпуска
+        tk.Label(
+            left_frame,
+            text="📅 Год выпуска:",
+            font=("Segoe UI", 11),
+            bg="#16213e",
+            fg="#cccccc"
+        ).pack(anchor="w", pady=(0, 5))
+        
+        self.year_entry = tk.Entry(
+            left_frame,
+            font=("Segoe UI", 11),
+            bg="#0f3460",
+            fg="#ffffff",
+            relief="flat",
+            width=25
+        )
+        self.year_entry.pack(fill="x", pady=(0, 15))
+        
+        # Поле рейтинга
+        tk.Label(
+            left_frame,
+            text="⭐ Рейтинг (0-10):",
+            font=("Segoe UI", 11),
+            bg="#16213e",
+            fg="#cccccc"
+        ).pack(anchor="w", pady=(0, 5))
+        
+        self.rating_entry = tk.Entry(
+            left_frame,
+            font=("Segoe UI", 11),
+            bg="#0f3460",
+            fg="#ffffff",
+            relief="flat",
+            width=25
+        )
+        self.rating_entry.pack(fill="x", pady=(0, 15))
+        
+        # Кнопка добавления
+        self.add_button = tk.Button(
+            left_frame,
+            text="➕ ДОБАВИТЬ ФИЛЬМ",
+            command=self.add_movie,
+            bg="#e94560",
+            fg="white",
+            font=("Segoe UI", 11, "bold"),
+            relief="flat",
+            cursor="hand2",
+            pady=8
+        )
+        self.add_button.pack(fill="x", pady=(5, 10))
+        
+        self.add_button.bind("<Enter>", lambda e: self.add_button.config(bg="#ff6b6b"))
+        self.add_button.bind("<Leave>", lambda e: self.add_button.config(bg="#e94560"))
+        
+        # Статистика
+        stats_frame = tk.Frame(left_frame, bg="#0f3460", relief="flat")
+        stats_frame.pack(fill="x", pady=(15, 0), ipady=10)
+        
+        tk.Label(
+            stats_frame,
+            text="📊 СТАТИСТИКА",
+            font=("Segoe UI", 12, "bold"),
+            bg="#0f3460",
+            fg="#ffffff"
+        ).pack(pady=(5, 10))
+        
+        self.total_label = tk.Label(
+            stats_frame,
+            text="Всего фильмов: 0",
+            font=("Segoe UI", 10),
+            bg="#0f3460",
+            fg="#4ecdc4"
+        )
+        self.total_label.pack()
+        
+        self.avg_rating_label = tk.Label(
+            stats_frame,
+            text="Средний рейтинг: 0",
+            font=("Segoe UI", 10),
+            bg="#0f3460",
+            fg="#4ecdc4"
+        )
+        self.avg_rating_label.pack()
+        
+        self.highest_rated_label = tk.Label(
+            stats_frame,
+            text="Лучший фильм: —",
+            font=("Segoe UI", 10),
+            bg="#0f3460",
+            fg="#4ecdc4"
+        )
+        self.highest_rated_label.pack()
+        
+        # Правая панель - таблица и фильтры
+        right_frame = tk.Frame(main_frame, bg="#1a1a2e")
+        right_frame.pack(side="right", fill="both", expand=True)
+        
+        # Панель фильтрации
+        filter_frame = tk.Frame(right_frame, bg="#16213e", relief="groove", bd=1)
+        filter_frame.pack(fill="x", pady=(0, 10), ipady=10, ipadx=10)
+        
+        tk.Label(
+            filter_frame,
+            text="🔍 ФИЛЬТРАЦИЯ",
+            font=("Segoe UI", 12, "bold"),
+            bg="#16213e",
+            fg="#ffffff"
+        ).pack(pady=(5, 10))
+        
+        # Фильтр по жанру
+        genre_filter_frame = tk.Frame(filter_frame, bg="#16213e")
+        genre_filter_frame.pack(fill="x", pady=5)
+        
+        tk.Label(
+            genre_filter_frame,
+            text="Жанр:",
+            font=("Segoe UI", 10),
+            bg="#16213e",
+            fg="#cccccc"
+        ).pack(side="left", padx=(5, 10))
+        
+        self.filter_genre = ttk.Combobox(
+            genre_filter_frame,
+            values=["Все"] + self.genres,
+            font=("Segoe UI", 10),
+            state="readonly",
+            width=15
+        )
+        self.filter_genre.pack(side="left", padx=(0, 20))
+        self.filter_genre.set("Все")
+        
+        # Фильтр по году
+        year_filter_frame = tk.Frame(filter_frame, bg="#16213e")
+        year_filter_frame.pack(fill="x", pady=5)
+        
+        tk.Label(
+            year_filter_frame,
+            text="Год:",
+            font=("Segoe UI", 10),
+            bg="#16213e",
+            fg="#cccccc"
+        ).pack(side="left", padx=(5, 10))
+        
+        self.filter_year_min = tk.Entry(
+            year_filter_frame,
+            font=("Segoe UI", 10),
+            bg="#0f3460",
+            fg="#ffffff",
+            relief="flat",
+            width=8
+        )
+        self.filter_year_min.pack(side="left", padx=(0, 5))
+        
+        tk.Label(
+            year_filter_frame,
+            text="до",
+            font=("Segoe UI", 10),
+            bg="#16213e",
+            fg="#cccccc"
+        ).pack(side="left", padx=5)
+        
+        self.filter_year_max = tk.Entry(
+            year_filter_frame,
+            font=("Segoe UI", 10),
+            bg="#0f3460",
+            fg="#ffffff",
+            relief="flat",
+            width=8
+        )
+        self.filter_year_max.pack(side="left", padx=(5, 20))
+        
+        # Кнопки фильтрации
+        filter_buttons = tk.Frame(filter_frame, bg="#16213e")
+        filter_buttons.pack(fill="x", pady=10)
+        
+        self.apply_filter_button = tk.Button(
+            filter_buttons,
+            text="Применить фильтр",
+            command=self.apply_filter,
+            bg="#e94560",
+            fg="white",
+            font=("Segoe UI", 9, "bold"),
+            relief="flat",
+            cursor="hand2"
+        )
+        self.apply_filter_button.pack(side="left", padx=5, expand=True, fill="x")
+        
+        self.reset_filter_button = tk.Button(
+            filter_buttons,
+            text="Сбросить фильтр",
+            command=self.reset_filter,
+            bg="#3498db",
+            fg="white",
+            font=("Segoe UI", 9, "bold"),
+            relief="flat",
+            cursor="hand2"
+        )
+        self.reset_filter_button.pack(side="left", padx=5, expand=True, fill="x")
+        
+        # Таблица фильмов
+        table_frame = tk.Frame(right_frame, bg="#1a1a2e")
+        table_frame.pack(fill="both", expand=True)
+        
+        tk.Label(
+            table_frame,
+            text="📋 ВСЕ ФИЛЬМЫ",
+            font=("Segoe UI", 12, "bold"),
+            bg="#1a1a2e",
+            fg="#ffffff"
+        ).pack(anchor="w", pady=(0, 8))
+        
+        # Treeview для таблицы
+        columns = ("title", "genre", "year", "rating")
+        self.movie_tree = ttk.Treeview(
+            table_frame,
+            columns=columns,
+            show="headings",
+            height=18
+        )
+        
+        self.movie_tree.heading("title", text="Название")
+        self.movie_tree.heading("genre", text="Жанр")
+        self.movie_tree.heading("year", text="Год")
+        self.movie_tree.heading("rating", text="Рейтинг")
+        
+        self.movie_tree.column("title", width=250)
+        self.movie_tree.column("genre", width=120, anchor="center")
+        self.movie_tree.column("year", width=80, anchor="center")
+        self.movie_tree.column("rating", width=80, anchor="center")
+        
+        # Скроллбар
+        scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=self.movie_tree.yview)
+        self.movie_tree.configure(yscrollcommand=scrollbar.set)
+        
+        self.movie_tree.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Кнопка удаления
+        delete_frame = tk.Frame(right_frame, bg="#1a1a2e")
+        delete_frame.pack(fill="x", pady=(10, 0))
+        
+        self.delete_button = tk.Button(
+            delete_frame,
+            text="🗑️ Удалить выбранный фильм",
+            command=self.delete_movie,
+            bg="#dc3545",
+            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            relief="flat",
+            cursor="hand2"
+        )
+        self.delete_button.pack()
+        
+        # Статусная строка
+        self.status_label = tk.Label(
+            self.window,
+            text="💡 Готов к работе",
+            font=("Segoe UI", 9),
+            bg="#1a1a2e",
+            fg="#888888",
+            anchor="w"
+        )
+        self.status_label.pack(side="bottom", fill="x", padx=20, pady=(0, 10))
+        
+        # Привязка клавиши Enter
+        self.title_entry.bind("<Return>", lambda event: self.add_movie())
+        
+        # Обновление статистики
+        self.update_statistics()
+    
+    def add_movie(self):
+        """Добавляет новый фильм"""
+        # Получение данных
+        title = self.title_entry.get().strip()
+        genre = self.genre_combo.get()
+        year_str = self.year_entry.get().strip()
+        rating_str = self.rating_entry.get().strip()
+        
+        # Валидация названия
+        if not title:
+            messagebox.showwarning("Ошибка", "Введите название фильма!")
+            return
+        
+        # Валидация жанра
+        if genre == "Выберите жанр":
+            messagebox.showwarning("Ошибка", "Выберите жанр фильма!")
+            return
+        
+        # Валидация года
+        if not year_str:
+            messagebox.showwarning("Ошибка", "Введите год выпуска!")
+            return
+        
+        try:
+            year = int(year_str)
+        except ValueError:
+            messagebox.showwarning("Ошибка", f"'{year_str}' — это не число!\nВведите корректный год.")
+            self.year_entry.delete(0, tk.END)
+            return
+        
+        if year < 1888 or year > 2030:
+            messagebox.showwarning("Ошибка", "Год должен быть от 1888 (год выхода первого фильма) до 2030!")
+            self.year_entry.delete(0, tk.END)
+            return
+        
+        # Валидация рейтинга
+        if not rating_str:
+            messagebox.showwarning("Ошибка", "Введите рейтинг фильма!")
+            return
+        
+        try:
+            rating = float(rating_str)
+        except ValueError:
+            messagebox.showwarning("Ошибка", f"'{rating_str}' — это не число!\nВведите число от 0 до 10.")
+            self.rating_entry.delete(0, tk.END)
+            return
+        
+        if rating < 0 or rating > 10:
+            messagebox.showwarning("Ошибка", "Рейтинг должен быть от 0 до 10!")
+            self.rating_entry.delete(0, tk.END)
+            return
+        
+        # Добавление фильма
+        movie = {
+            "title": title,
+            "genre": genre,
+            "year": year,
+            "rating": rating
+        }
+        
+        self.movies.append(movie)
+        # Сортируем по названию
+        self.movies.sort(key=lambda x: x["title"])
+        self.save_movies()
+        self.update_table()
+        self.update_statistics()
+        
+        # Очистка полей
+        self.title_entry.delete(0, tk.END)
+        self.genre_combo.set("Выберите жанр")
+        self.year_entry.delete(0, tk.END)
+        self.rating_entry.delete(0, tk.END)
+        
+        self.status_label.config(text=f"✅ Фильм добавлен: {title}", fg="#4ecdc4")
+        self.window.after(3000, lambda: self.status_label.config(text="💡 Готов к работе", fg="#888888"))
+        
+        self.title_entry.focus()
+    
+    def delete_movie(self):
+        """Удаляет выбранный фильм"""
+        selected = self.movie_tree.selection()
+        if not selected:
+            messagebox.showwarning("Ошибка", "Выберите фильм для удаления!")
+            return
+        
+        item = selected[0]
+        values = self.movie_tree.item(item, "values")
+        title = values[0]
+        
+        if messagebox.askyesno("Подтверждение", f"Удалить фильм '{title}'?"):
+            # Находим и удаляем фильм
+            for i, movie in enumerate(self.movies):
+                if movie["title"] == title:
+                    self.movies.pop(i)
+                    break
+            
+            self.save_movies()
+            self.update_table()
+            self.update_statistics()
+            self.apply_filter()  # Переприменяем фильтр
+            self.status_label.config(text=f"🗑️ Фильм удалён: {title}", fg="#ff6b6b")
+            self.window.after(3000, lambda: self.status_label.config(text="💡 Готов к работе", fg="#888888"))
+    
+    def apply_filter(self):
+        """Применяет фильтрацию фильмов"""
+        filter_genre = self.filter_genre.get()
+        filter_year_min_str = self.filter_year_min.get().strip()
+        filter_year_max_str = self.filter_year_max.get().strip()
+        
+        filtered = self.movies.copy()
+        
+        # Фильтр по жанру
+        if filter_genre != "Все":
+            filtered = [m for m in filtered if m["genre"] == filter_genre]
+        
+        # Фильтр по году
+        if filter_year_min_str:
+            try:
+                year_min = int(filter_year_min_str)
+                filtered = [m for m in filtered if m["year"] >= year_min]
+            except ValueError:
+                messagebox.showwarning("Ошибка", "Неверное значение минимального года!")
+                return
+        
+        if filter_year_max_str:
+            try:
+                year_max = int(filter_year_max_str)
+                filtered = [m for m in filtered if m["year"] <= year_max]
+            except ValueError:
+                messagebox.showwarning("Ошибка", "Неверное значение максимального года!")
+                return
+        
+        # Обновление таблицы
+        self.update_table(filtered)
+        
+        # Статус
+        self.status_label.config(text=f"🔍 Найдено {len(filtered)} фильмов", fg="#f39c12")
+        self.window.after(3000, lambda: self.status_label.config(text="💡 Готов к работе", fg="#888888"))
+    
+    def reset_filter(self):
+        """Сбрасывает фильтр"""
+        self.filter_genre.set("Все")
+        self.filter_year_min.delete(0, tk.END)
+        self.filter_year_max.delete(0, tk.END)
+        
+        self.update_table()
+        self.status_label.config(text="🔄 Фильтр сброшен", fg="#4ecdc4")
+        self.window.after(3000, lambda: self.status_label.config(text="💡 Готов к работе", fg="#888888"))
+    
+    def update_table(self, movies_list=None):
+        """Обновляет таблицу фильмов"""
+        # Очищаем таблицу
+        for item in self.movie_tree.get_children():
+            self.movie_tree.delete(item)
+        
+        if movies_list is None:
+            movies_list = self.movies
+        
+        # Добавляем фильмы
+        for movie in movies_list:
+            # Форматирование рейтинга
+            rating_display = f"{movie['rating']:.1f}" if isinstance(movie['rating'], float) else f"{movie['rating']}"
+            stars = "⭐" * min(5, int(movie['rating'] / 2))
+            rating_text = f"{rating_display} {stars}"
+            
+            self.movie_tree.insert("", "end", values=(
+                movie["title"],
+                movie["genre"],
+                movie["year"],
+                rating_text
+            ))
+    
+    def update_statistics(self):
+        """Обновляет статистику"""
+        if not self.movies:
+            self.total_label.config(text="Всего фильмов: 0")
+            self.avg_rating_label.config(text="Средний рейтинг: 0")
+            self.highest_rated_label.config(text="Лучший фильм: —")
+            return
+        
+        total = len(self.movies)
+        ratings = [m["rating"] for m in self.movies]
+        avg_rating = sum(ratings) / len(ratings)
+        
+        # Находим фильм с наивысшим рейтингом
+        best_movie = max(self.movies, key=lambda x: x["rating"])
+        
+        self.total_label.config(text=f"Всего фильмов: {total}")
+        self.avg_rating_label.config(text=f"Средний рейтинг: {avg_rating:.1f}")
+        self.highest_rated_label.config(text=f"Лучший фильм: {best_movie['title']} (⭐{best_movie['rating']})")
+    
+    def on_closing(self):
+        """Обработка закрытия окна"""
+        if self.save_movies():
+            self.window.destroy()
+    
+    def run(self):
+        """Запуск приложения"""
+        self.window.mainloop()
+
+# Запуск программы
+if __name__ == "__main__":
+    app = MovieLibrary()
+    app.run()
